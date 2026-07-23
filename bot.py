@@ -146,10 +146,14 @@ class DiscordBot(commands.Bot):
                 # Final fallback to naive UTC for older Python versions
                 self.start_time = _dt.datetime.utcnow()
 
+    def _db_path(self) -> str:
+        return os.getenv(
+            "DB_PATH",
+            f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db",
+        )
+
     async def init_db(self) -> None:
-        async with aiosqlite.connect(
-            f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
-        ) as db:
+        async with aiosqlite.connect(self._db_path()) as db:
             with open(
                 f"{os.path.realpath(os.path.dirname(__file__))}/database/schema.sql",
                 encoding = "utf-8"
@@ -158,8 +162,7 @@ class DiscordBot(commands.Bot):
             await db.commit()
 
     async def _run_migrations(self) -> None:
-        db_path = f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
-        async with aiosqlite.connect(db_path) as db:
+        async with aiosqlite.connect(self._db_path()) as db:
             # Check whether the new columns already exist
             cursor = await db.execute("PRAGMA table_info(season_cache)")
             columns = {row[1] async for row in cursor}
@@ -227,9 +230,7 @@ class DiscordBot(commands.Bot):
         await self._run_migrations()
         # Open the DB connection and set DatabaseManager before loading cogs
         self.database = DatabaseManager(
-            connection=await aiosqlite.connect(
-                f"{os.path.realpath(os.path.dirname(__file__))}/database/database.db"
-            )
+            connection=await aiosqlite.connect(self._db_path())
         )
         await self.load_cogs()
         self.status_task.start()
