@@ -4,11 +4,11 @@ from discord import app_commands
 from discord.ext import commands
 
 
-class FeedbackForm(discord.ui.Modal, title="Feeedback"):
+class FeedbackForm(discord.ui.Modal, title="Feedback"):
     feedback = discord.ui.TextInput(
         label="What do you think about this bot?",
         style=discord.TextStyle.long,
-        placeholder="Type your answer here...",
+        placeholder="Your message, Discord account details and server name are shared privately with the maintainer.",
         required=True,
         max_length=256,
     )
@@ -431,7 +431,8 @@ class General(commands.Cog, name="general"):
                 self.bot.logger.warning("Could not DM owner with feedback (DMs closed).")
         except Exception as e:
             if hasattr(self.bot, "logger"):
-                self.bot.logger.error(f"Failed to forward feedback to owner: {e}")
+                # Log only the error type; never the feedback text
+                self.bot.logger.error(f"Failed to forward feedback to owner: {type(e).__name__}")
 
 
 async def setup(bot) -> None:

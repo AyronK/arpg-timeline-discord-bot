@@ -1,5 +1,6 @@
 import json
 import logging
+import logging.handlers
 import os
 import platform
 import random
@@ -74,7 +75,13 @@ console_handler.setFormatter(LoggingFormatter())
 # File handler (ensure logs directory exists)
 log_dir = os.path.join(os.path.dirname(__file__), "logs")
 os.makedirs(log_dir, exist_ok=True)
-file_handler = logging.FileHandler(filename=os.path.join(log_dir, "discord.log"), encoding="utf-8", mode="w")
+# Size-limited rotation keeps logs short-lived: at most ~4 MB on disk (1 MB + 3 backups)
+file_handler = logging.handlers.RotatingFileHandler(
+    filename=os.path.join(log_dir, "discord.log"),
+    encoding="utf-8",
+    maxBytes=1024 * 1024,
+    backupCount=3,
+)
 file_handler_formatter = logging.Formatter(
     "[{asctime}] [{levelname:<8}] {name}: {message}", "%Y-%m-%d %H:%M:%S", style="{"
 )
@@ -258,7 +265,7 @@ class DiscordBot(commands.Bot):
         if interaction.type == discord.InteractionType.application_command:
             command_name = getattr(interaction.command, 'name', 'unknown') if interaction.command else 'unknown'
             location = f"in {interaction.guild.name} (ID: {interaction.guild.id})" if interaction.guild else "in DMs"
-            self.logger.debug(f"Received /{command_name} interaction {location} from {interaction.user} (ID: {interaction.user.id})")
+            self.logger.debug(f"Received /{command_name} interaction {location} from user ID {interaction.user.id}")
 
     async def on_command_completion(self, context: Context) -> None:
         """
@@ -271,11 +278,11 @@ class DiscordBot(commands.Bot):
         executed_command = str(split[0])
         if context.guild is not None:
             self.logger.info(
-                f"Executed {executed_command} command in {context.guild.name} (ID: {context.guild.id}) by {context.author} (ID: {context.author.id})"
+                f"Executed {executed_command} command in {context.guild.name} (ID: {context.guild.id}) by user ID {context.author.id}"
             )
         else:
             self.logger.info(
-                f"Executed {executed_command} command by {context.author} (ID: {context.author.id}) in DMs"
+                f"Executed {executed_command} command by user ID {context.author.id} in DMs"
             )
 
     async def on_app_command_completion(self, interaction: discord.Interaction, command: discord.app_commands.Command) -> None:
@@ -288,11 +295,11 @@ class DiscordBot(commands.Bot):
         command_name = command.name
         if interaction.guild is not None:
             self.logger.info(
-                f"Executed /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by {interaction.user} (ID: {interaction.user.id})"
+                f"Executed /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by user ID {interaction.user.id}"
             )
         else:
             self.logger.info(
-                f"Executed /{command_name} slash command by {interaction.user} (ID: {interaction.user.id}) in DMs"
+                f"Executed /{command_name} slash command by user ID {interaction.user.id} in DMs"
             )
 
     async def on_app_command_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
@@ -306,11 +313,11 @@ class DiscordBot(commands.Bot):
         
         if interaction.guild is not None:
             self.logger.error(
-                f"Error in /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by {interaction.user} (ID: {interaction.user.id}): {error}"
+                f"Error in /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by user ID {interaction.user.id}: {error}"
             )
         else:
             self.logger.error(
-                f"Error in /{command_name} slash command by {interaction.user} (ID: {interaction.user.id}) in DMs: {error}"
+                f"Error in /{command_name} slash command by user ID {interaction.user.id} in DMs: {error}"
             )
         
         # Send a generic error message to the user if they haven't been responded to yet
@@ -356,11 +363,11 @@ class DiscordBot(commands.Bot):
             await context.send(embed=embed)
             if context.guild:
                 self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."
+                    f"User ID {context.author.id} tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."
                 )
             else:
                 self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."
+                    f"User ID {context.author.id} tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."
                 )
         elif isinstance(error, commands.MissingPermissions):
             embed = discord.Embed(
