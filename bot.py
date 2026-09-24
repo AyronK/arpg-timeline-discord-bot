@@ -235,6 +235,41 @@ class DiscordBot(commands.Bot):
         await self.load_cogs()
         self.status_task.start()
 
+    async def on_ready(self) -> None:
+        """
+        Remove stored data for servers the bot left while it was offline.
+        on_ready can fire again after reconnects, so the cleanup only runs once per process.
+        """
+        if getattr(self, "_stale_guilds_purged", False) or self.database is None:
+            return
+        self._stale_guilds_purged = True
+        # Never treat an empty guild cache as "left every server"
+        if not self.guilds:
+            self.logger.warning("Skipping stale guild cleanup: guild cache is empty")
+            return
+        current = {str(g.id) for g in self.guilds}
+        try:
+            stale = await self.database.get_stored_guild_ids() - current
+            for guild_id in stale:
+                deleted = await self.database.delete_guild_data(guild_id)
+                self.logger.info(f"guild={guild_id} action=purge_stale_guild rows_deleted={deleted}")
+        except Exception as e:
+            self.logger.error(f"Stale guild cleanup failed: {e}")
+
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        """
+        Delete all stored data for a server when the bot is removed from it.
+
+        :param guild: The guild the bot was removed from.
+        """
+        if self.database is None:
+            return
+        try:
+            deleted = await self.database.delete_guild_data(guild.id)
+            self.logger.info(f"guild={guild.id} action=purge_removed_guild rows_deleted={deleted}")
+        except Exception as e:
+            self.logger.error(f"guild={guild.id} action=purge_removed_guild failed: {e}")
+
     async def on_message(self, message: discord.Message) -> None:
         """
         The code in this event is executed every time someone sends a message, with or without the prefix
