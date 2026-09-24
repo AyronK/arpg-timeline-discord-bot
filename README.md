@@ -1,7 +1,7 @@
 # aRPG Timeline Discord Bot
 
 [![Discord](https://img.shields.io/discord/1258784665771311126?color=7289da&logo=discord&logoColor=white)](https://discord.gg/MA4eGN9Hbu)
-[![License](https://img.shields.io/github/license/svn-josh/aRPG-Timeline-Discord-Bot)](LICENSE)
+[![License](https://img.shields.io/github/license/AyronK/arpg-timeline-discord-bot)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 
 A Discord bot that tracks upcoming **Action RPG (aRPG) seasons** using the [aRPG Timeline API](https://arpg-timeline.com) and adds them to your server as Discord scheduled events. Never miss a new season launch again!
@@ -9,11 +9,12 @@ A Discord bot that tracks upcoming **Action RPG (aRPG) seasons** using the [aRPG
 ## 🎮 Features
 
 - **📅 Discord Events**: Creates a scheduled Discord event for each upcoming season, so members can mark themselves as interested and get Discord's own event reminders
-- **🔄 Kept Up to Date**: Updates events when season details change and deletes them if a season is cancelled or postponed
+- **🔄 Kept Up to Date**: Checks for season changes every 15 minutes, updates events when details change and deletes them if a season is cancelled or postponed
 - **⚙️ Configurable**: Choose which games get events in your server
 - **🎯 Multiple Games**: Supports Diablo, Path of Exile, Torchlight, and more
 - **📊 Season Tracking**: View active seasons with start/end dates
 - **🛡️ Permission Checks**: Validates bot permissions before enabling features
+- **🔒 Privacy-Friendly**: No privileged intents; stores only server settings and event IDs, and deletes them when the bot leaves a server
 
 ## 🚀 Quick Start
 
@@ -31,14 +32,14 @@ If you prefer to host your own instance:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/svn-josh/aRPG-Timeline-Discord-Bot.git
-   cd aRPG-Timeline-Discord-Bot
+   git clone https://github.com/AyronK/arpg-timeline-discord-bot.git
+   cd arpg-timeline-discord-bot
    ```
 
 2. **Set up environment variables**
    ```bash
    cp .env.example .env
-   # Edit .env with your bot token and API credentials
+   # Edit .env with your bot token and aRPG Timeline API credentials
    ```
 
 3. **Run with Docker Compose**
@@ -46,15 +47,31 @@ If you prefer to host your own instance:
    docker-compose up -d
    ```
 
+To run without Docker (Python 3.12):
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python bot.py
+```
+
+The official bot runs on Fly.io; see [docs/fly/deployment.md](docs/fly/deployment.md).
+
 ## 🔧 Commands
 
 | Command | Description | Permission |
 |---------|-------------|------------|
-| `/arpg-enable <true/false>` | Enable/disable all season notifications | Server Owner |
-| `/arpg-toggle-game` | Interactive menu to enable/disable specific games | Server Owner |
-| `/arpg-status` | Show current notification settings | Anyone |
+| `/arpg-enable <true/false>` | Enable/disable season events for the server (on by default) | Server Owner |
+| `/arpg-toggle-game` | Interactive menu to choose which games get events (all off by default) | Server Owner |
+| `/arpg-status` | Show current season event settings | Anyone |
 | `/arpg-seasons` | List all currently active seasons | Anyone |
 | `/arpg-check-permissions` | Check if bot has required permissions | Anyone |
+| `/help` | List all slash commands | Anyone |
+| `/ping` | Check bot latency | Anyone |
+| `/invite` | Get the bot invite link | Anyone |
+| `/support` | Get the support server link | Anyone |
+| `/feedback` | Send feedback privately to the maintainers | Anyone |
+
+Bot owners also have `/stats`, `/load`, `/unload`, `/reload`, `/shutdown`, `/say`, `/embed`, and the prefix commands `sync` / `unsync` (use them in a DM with the bot, or by @mentioning it in a channel it can see).
 
 ## 🎯 Supported Games
 
@@ -69,7 +86,7 @@ The bot tracks seasons for popular aRPG titles including:
 - **Titan Quest 2**
 - And more!
 
-*Game support depends on data availability from [aRPG Timeline](https://arpg-timeline.com)*
+*The game list comes live from [aRPG Timeline](https://arpg-timeline.com), so new games appear automatically.*
 
 ## 📋 Required Permissions
 
@@ -91,20 +108,22 @@ The invite links above request exactly these (`permissions=17602923482112`). Use
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `TOKEN` | Discord bot token | ✅ |
-| `PREFIX` | Command prefix (for legacy commands) | ❌ |
-| `INVITE_LINK` | Bot invite link | ❌ |
+| `ARPG_API_BASE` | aRPG Timeline API base URL (`https://www.arpg-timeline.com/api`) | ✅ |
+| `ARPG_TOKEN_URL` | Token endpoint (defaults to `{ARPG_API_BASE}/token`) | ❌ |
+| `ARPG_CLIENT_ID` | aRPG Timeline API client ID | ✅ |
+| `ARPG_CLIENT_SECRET` | aRPG Timeline API client secret | ✅ |
+| `PREFIX` | Prefix for the owner `sync` / `unsync` commands | ❌ |
+| `INVITE_LINK` | Link shown by `/invite` | ❌ |
 | `FEEDBACK_USER_IDS` | Comma-separated user IDs that receive `/feedback` DMs (defaults to the app/team owner). Each must share a server with the bot and allow DMs | ❌ |
-| `ARPG_API_BASE` | aRPG Timeline API base URL | ❌ |
-| `ARPG_CLIENT_ID` | API client ID | ❌ |
-| `ARPG_CLIENT_SECRET` | API client secret | ❌ |
 | `TOPGG_TOKEN` | top.gg API token; if set, the server count is posted to top.gg every 30 minutes | ❌ |
+| `DB_PATH` | SQLite database path (defaults to `database/database.db`) | ❌ |
 
 ### Server Setup
 
 1. **Invite the bot** with the permissions above
 2. **Run** `/arpg-check-permissions` to verify setup
-3. **Enable notifications** with `/arpg-enable true`
-4. **Configure games** using `/arpg-toggle-game`
+3. **Choose games** using `/arpg-toggle-game` (all games start disabled)
+4. Season events are on by default; use `/arpg-enable false` to pause them
 
 ## 🐳 Docker Deployment
 
@@ -129,7 +148,9 @@ Uses SQLite for data persistence:
 - **Guild settings** - Server-specific configuration
 - **Game toggles** - Per-server game enable/disable state
 - **Season cache** - Which seasons already have an event, and that event's ID (prevents duplicates)
-- **API tokens** - Cached authentication tokens
+- **API tokens / API cache** - Cached aRPG Timeline API token and responses
+
+Server data is deleted when the bot leaves a server, including servers it left while offline. Logs rotate at 1 MB with 3 backups.
 
 ## 🔗 Related Links
 
