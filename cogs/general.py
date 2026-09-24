@@ -26,34 +26,6 @@ class General(commands.Cog, name="general"):
             name="Grab ID", callback=self.grab_id
         )
         self.bot.tree.add_command(self.context_menu_user)
-        self.context_menu_message = app_commands.ContextMenu(
-            name="Remove spoilers", callback=self.remove_spoilers
-        )
-        self.bot.tree.add_command(self.context_menu_message)
-
-    # Message context menu command
-    async def remove_spoilers(
-        self, interaction: discord.Interaction, message: discord.Message
-    ) -> None:
-        """
-        Removes the spoilers from the message. This command requires the MESSAGE_CONTENT intent to work properly.
-
-        :param interaction: The application command interaction.
-        :param message: The message that is being interacted with.
-        """
-        spoiler_attachment = None
-        for attachment in message.attachments:
-            if attachment.is_spoiler():
-                spoiler_attachment = attachment
-                break
-        embed = discord.Embed(
-            title="Message without spoilers",
-            description=message.content.replace("||", ""),
-            color=0xBEBEFE,
-        )
-        if spoiler_attachment is not None:
-            embed.set_image(url=attachment.url)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # User context menu command
     async def grab_id(
