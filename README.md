@@ -93,6 +93,7 @@ The invite links above request exactly these (`permissions=17602923482112`). Use
 | `TOKEN` | Discord bot token | ✅ |
 | `PREFIX` | Command prefix (for legacy commands) | ❌ |
 | `INVITE_LINK` | Bot invite link | ❌ |
+| `FEEDBACK_USER_IDS` | Comma-separated user IDs that receive `/feedback` DMs (defaults to the app/team owner). Each must share a server with the bot and allow DMs | ❌ |
 | `ARPG_API_BASE` | aRPG Timeline API base URL | ❌ |
 | `ARPG_CLIENT_ID` | API client ID | ❌ |
 | `ARPG_CLIENT_SECRET` | API client secret | ❌ |

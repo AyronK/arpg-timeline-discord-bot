@@ -1,3 +1,4 @@
+import os
 import platform
 import discord
 from discord import app_commands
@@ -385,13 +386,7 @@ class General(commands.Cog, name="general"):
         
         await interaction.response.send_message(embed=thank_you_embed)
 
-        # Enhanced feedback notification to owner
-        # For team-owned apps, `owner` is a pseudo-user representing the team and cannot be DMed
-        app_info = await self.bot.application_info()
-        if app_info.team and app_info.team.owner_id:
-            app_owner = await self.bot.fetch_user(app_info.team.owner_id)
-        else:
-            app_owner = app_info.owner
+        # Enhanced feedback notification to maintainers
         feedback_embed = discord.Embed(
             title="💬 New User Feedback",
             description=f"**From:** {interaction.user} ({interaction.user.mention})\n**User ID:** `{interaction.user.id}`",
@@ -428,16 +423,40 @@ class General(commands.Cog, name="general"):
         
         feedback_embed.set_thumbnail(url=interaction.user.avatar.url if interaction.user.avatar else None)
         
-        try:
-            await app_owner.send(embed=feedback_embed)
-        except discord.Forbidden as e:
-            # Owner DMs closed; log and optionally post in a designated channel if configured later
-            if hasattr(self.bot, "logger"):
-                self.bot.logger.warning(f"Could not DM owner with feedback (DMs closed, code={e.code}).")
-        except Exception as e:
-            if hasattr(self.bot, "logger"):
+        for recipient_id in await self._feedback_recipient_ids():
+            try:
+                recipient = await self.bot.fetch_user(recipient_id)
+                await recipient.send(embed=feedback_embed)
+            except discord.Forbidden as e:
+                # Recipient DMs closed or no mutual server with the bot
+                self.bot.logger.warning(
+                    f"Could not DM feedback to user ID {recipient_id} (DMs closed, code={e.code})."
+                )
+            except Exception as e:
                 # Log only the error type; never the feedback text
-                self.bot.logger.error(f"Failed to forward feedback to owner: {type(e).__name__}")
+                self.bot.logger.error(
+                    f"Failed to forward feedback to user ID {recipient_id}: {type(e).__name__}"
+                )
+
+    async def _feedback_recipient_ids(self) -> list[int]:
+        """
+        User IDs that receive /feedback DMs: FEEDBACK_USER_IDS (comma-separated) if set,
+        otherwise the application owner (the team owner for team-owned apps).
+        """
+        ids = []
+        for part in os.getenv("FEEDBACK_USER_IDS", "").split(","):
+            part = part.strip()
+            if part.isdigit():
+                ids.append(int(part))
+            elif part:
+                self.bot.logger.warning(f"Ignoring invalid FEEDBACK_USER_IDS entry: {part!r}")
+        if ids:
+            return ids
+        app_info = await self.bot.application_info()
+        # For team-owned apps, `owner` is a pseudo-user representing the team and cannot be DMed
+        if app_info.team and app_info.team.owner_id:
+            return [app_info.team.owner_id]
+        return [app_info.owner.id]
 
 
 async def setup(bot) -> None:
