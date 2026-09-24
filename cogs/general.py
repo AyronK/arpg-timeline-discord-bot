@@ -386,7 +386,12 @@ class General(commands.Cog, name="general"):
         await interaction.response.send_message(embed=thank_you_embed)
 
         # Enhanced feedback notification to owner
-        app_owner = (await self.bot.application_info()).owner
+        # For team-owned apps, `owner` is a pseudo-user representing the team and cannot be DMed
+        app_info = await self.bot.application_info()
+        if app_info.team and app_info.team.owner_id:
+            app_owner = await self.bot.fetch_user(app_info.team.owner_id)
+        else:
+            app_owner = app_info.owner
         feedback_embed = discord.Embed(
             title="💬 New User Feedback",
             description=f"**From:** {interaction.user} ({interaction.user.mention})\n**User ID:** `{interaction.user.id}`",
@@ -425,10 +430,10 @@ class General(commands.Cog, name="general"):
         
         try:
             await app_owner.send(embed=feedback_embed)
-        except discord.Forbidden:
+        except discord.Forbidden as e:
             # Owner DMs closed; log and optionally post in a designated channel if configured later
             if hasattr(self.bot, "logger"):
-                self.bot.logger.warning("Could not DM owner with feedback (DMs closed).")
+                self.bot.logger.warning(f"Could not DM owner with feedback (DMs closed, code={e.code}).")
         except Exception as e:
             if hasattr(self.bot, "logger"):
                 # Log only the error type; never the feedback text
