@@ -123,7 +123,7 @@ class General(commands.Cog, name="general"):
         # Add helpful footer
         embed.add_field(
             name="💡 Getting Started",
-            value="• Use `/arpg-status` to check your notification settings\n• Use `/arpg-toggle-game` to configure which games to track\n• Use `/feedback` to send suggestions to the bot developers",
+            value="• Use `/arpg-status` to check your season event settings\n• Use `/arpg-toggle-game` to configure which games to track\n• Use `/feedback` to send suggestions to the bot developers",
             inline=False
         )
         

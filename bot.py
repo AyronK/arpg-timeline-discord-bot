@@ -175,7 +175,7 @@ class DiscordBot(commands.Bot):
         "calculating loot drops!",
         "watching ARPG timelines!",
         "summoning bosses!",
-        "leveling up your notifications!",
+        "leveling up your events!",
         "preparing the next event!",
         "exploring dungeons!",
         "⏳arpg-timeline.com",
