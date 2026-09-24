@@ -223,7 +223,7 @@ class General(commands.Cog, name="general"):
         """
         embed = discord.Embed(
             title="🤖 Invite Me to Your Server!",
-            description=f"Add **{self.bot.user.display_name}** to your Discord server to track aRPG seasons and get notifications about new content!",
+            description=f"Add **{self.bot.user.display_name}** to your Discord server to track aRPG seasons as Discord scheduled events!",
             color=0x5865F2,
             timestamp=discord.utils.utcnow()
         )
@@ -233,7 +233,7 @@ class General(commands.Cog, name="general"):
         # Add features info
         embed.add_field(
             name="✨ What You Get",
-            value="🎮 **Season Tracking** - Never miss a new aRPG season\n📅 **Discord Events** - Automatic event creation\n⚙️ **Customizable** - Choose which games to track\n🔔 **Smart Notifications** - Only get notified about what matters",
+            value="🎮 **Season Tracking** - Never miss a new aRPG season\n📅 **Discord Events** - A scheduled event for each upcoming season\n🔄 **Kept Up to Date** - Events update or disappear when seasons change\n⚙️ **Customizable** - Choose which games get events",
             inline=False
         )
         

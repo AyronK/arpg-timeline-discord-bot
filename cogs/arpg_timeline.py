@@ -291,8 +291,8 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         return True, None
 
 
-    @app_commands.command(name="arpg-enable", description="Enable or disable all season notifications")
-    @app_commands.describe(enabled="Enable or disable all notifications for this server")
+    @app_commands.command(name="arpg-enable", description="Enable or disable season events for this server")
+    @app_commands.describe(enabled="Enable or disable creating season events in this server")
     async def set_enabled(self, interaction: discord.Interaction, enabled: bool):
         """
         Globally enable or disable all season notifications for this guild.
@@ -326,7 +326,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         await interaction.response.send_message(response_msg, ephemeral=False)
 
 
-    @app_commands.command(name="arpg-toggle-game", description="Configure which games to track for season notifications")
+    @app_commands.command(name="arpg-toggle-game", description="Choose which games get season events in this server")
     async def toggle_game(self, interaction: discord.Interaction):
         """
         Interactive dropdown to toggle games on/off. All games are OFF by default unless explicitly enabled.
@@ -689,7 +689,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         initial_embed = view.create_main_embed()
         await interaction.edit_original_response(embed=initial_embed, view=view)
 
-    @app_commands.command(name="arpg-status", description="Show current ARPG notification settings")
+    @app_commands.command(name="arpg-status", description="Show current aRPG season event settings")
     async def status(self, interaction: discord.Interaction):
         """
         Display the current notification configuration for this guild: enablement state and per-game toggle states.
