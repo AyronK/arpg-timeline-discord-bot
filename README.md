@@ -96,6 +96,7 @@ The invite links above request exactly these (`permissions=17602923482112`). Use
 | `ARPG_API_BASE` | aRPG Timeline API base URL | ❌ |
 | `ARPG_CLIENT_ID` | API client ID | ❌ |
 | `ARPG_CLIENT_SECRET` | API client secret | ❌ |
+| `TOPGG_TOKEN` | top.gg API token; if set, the server count is posted to top.gg every 30 minutes | ❌ |
 
 ### Server Setup
 
