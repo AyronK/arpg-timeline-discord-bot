@@ -1,14 +1,15 @@
+import os
 import platform
 import discord
 from discord import app_commands
 from discord.ext import commands
 
 
-class FeedbackForm(discord.ui.Modal, title="Feeedback"):
+class FeedbackForm(discord.ui.Modal, title="Feedback"):
     feedback = discord.ui.TextInput(
         label="What do you think about this bot?",
         style=discord.TextStyle.long,
-        placeholder="Type your answer here...",
+        placeholder="Your message, Discord account details and server name are shared privately with the maintainer.",
         required=True,
         max_length=256,
     )
@@ -26,34 +27,6 @@ class General(commands.Cog, name="general"):
             name="Grab ID", callback=self.grab_id
         )
         self.bot.tree.add_command(self.context_menu_user)
-        self.context_menu_message = app_commands.ContextMenu(
-            name="Remove spoilers", callback=self.remove_spoilers
-        )
-        self.bot.tree.add_command(self.context_menu_message)
-
-    # Message context menu command
-    async def remove_spoilers(
-        self, interaction: discord.Interaction, message: discord.Message
-    ) -> None:
-        """
-        Removes the spoilers from the message. This command requires the MESSAGE_CONTENT intent to work properly.
-
-        :param interaction: The application command interaction.
-        :param message: The message that is being interacted with.
-        """
-        spoiler_attachment = None
-        for attachment in message.attachments:
-            if attachment.is_spoiler():
-                spoiler_attachment = attachment
-                break
-        embed = discord.Embed(
-            title="Message without spoilers",
-            description=message.content.replace("||", ""),
-            color=0xBEBEFE,
-        )
-        if spoiler_attachment is not None:
-            embed.set_image(url=attachment.url)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
 
     # User context menu command
     async def grab_id(
@@ -150,7 +123,7 @@ class General(commands.Cog, name="general"):
         # Add helpful footer
         embed.add_field(
             name="💡 Getting Started",
-            value="• Use `/arpg-status` to check your notification settings\n• Use `/arpg-toggle-game` to configure which games to track\n• Use `/feedback` to send suggestions to the bot developers",
+            value="• Use `/arpg-status` to check your season event settings\n• Use `/arpg-toggle-game` to configure which games to track\n• Use `/feedback` to send suggestions to the bot developers",
             inline=False
         )
         
@@ -250,7 +223,7 @@ class General(commands.Cog, name="general"):
         """
         embed = discord.Embed(
             title="🤖 Invite Me to Your Server!",
-            description=f"Add **{self.bot.user.display_name}** to your Discord server to track aRPG seasons and get notifications about new content!",
+            description=f"Add **{self.bot.user.display_name}** to your Discord server to track aRPG seasons as Discord scheduled events!",
             color=0x5865F2,
             timestamp=discord.utils.utcnow()
         )
@@ -260,7 +233,7 @@ class General(commands.Cog, name="general"):
         # Add features info
         embed.add_field(
             name="✨ What You Get",
-            value="🎮 **Season Tracking** - Never miss a new aRPG season\n📅 **Discord Events** - Automatic event creation\n⚙️ **Customizable** - Choose which games to track\n🔔 **Smart Notifications** - Only get notified about what matters",
+            value="🎮 **Season Tracking** - Never miss a new aRPG season\n📅 **Discord Events** - A scheduled event for each upcoming season\n🔄 **Kept Up to Date** - Events update or disappear when seasons change\n⚙️ **Customizable** - Choose which games get events",
             inline=False
         )
         
@@ -413,8 +386,7 @@ class General(commands.Cog, name="general"):
         
         await interaction.response.send_message(embed=thank_you_embed)
 
-        # Enhanced feedback notification to owner
-        app_owner = (await self.bot.application_info()).owner
+        # Enhanced feedback notification to maintainers
         feedback_embed = discord.Embed(
             title="💬 New User Feedback",
             description=f"**From:** {interaction.user} ({interaction.user.mention})\n**User ID:** `{interaction.user.id}`",
@@ -451,15 +423,40 @@ class General(commands.Cog, name="general"):
         
         feedback_embed.set_thumbnail(url=interaction.user.avatar.url if interaction.user.avatar else None)
         
-        try:
-            await app_owner.send(embed=feedback_embed)
-        except discord.Forbidden:
-            # Owner DMs closed; log and optionally post in a designated channel if configured later
-            if hasattr(self.bot, "logger"):
-                self.bot.logger.warning("Could not DM owner with feedback (DMs closed).")
-        except Exception as e:
-            if hasattr(self.bot, "logger"):
-                self.bot.logger.error(f"Failed to forward feedback to owner: {e}")
+        for recipient_id in await self._feedback_recipient_ids():
+            try:
+                recipient = await self.bot.fetch_user(recipient_id)
+                await recipient.send(embed=feedback_embed)
+            except discord.Forbidden as e:
+                # Recipient DMs closed or no mutual server with the bot
+                self.bot.logger.warning(
+                    f"Could not DM feedback to user ID {recipient_id} (DMs closed, code={e.code})."
+                )
+            except Exception as e:
+                # Log only the error type; never the feedback text
+                self.bot.logger.error(
+                    f"Failed to forward feedback to user ID {recipient_id}: {type(e).__name__}"
+                )
+
+    async def _feedback_recipient_ids(self) -> list[int]:
+        """
+        User IDs that receive /feedback DMs: FEEDBACK_USER_IDS (comma-separated) if set,
+        otherwise the application owner (the team owner for team-owned apps).
+        """
+        ids = []
+        for part in os.getenv("FEEDBACK_USER_IDS", "").split(","):
+            part = part.strip()
+            if part.isdigit():
+                ids.append(int(part))
+            elif part:
+                self.bot.logger.warning(f"Ignoring invalid FEEDBACK_USER_IDS entry: {part!r}")
+        if ids:
+            return ids
+        app_info = await self.bot.application_info()
+        # For team-owned apps, `owner` is a pseudo-user representing the team and cannot be DMed
+        if app_info.team and app_info.team.owner_id:
+            return [app_info.team.owner_id]
+        return [app_info.owner.id]
 
 
 async def setup(bot) -> None:

@@ -291,8 +291,8 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         return True, None
 
 
-    @app_commands.command(name="arpg-enable", description="Enable or disable all season notifications")
-    @app_commands.describe(enabled="Enable or disable all notifications for this server")
+    @app_commands.command(name="arpg-enable", description="Enable or disable season events for this server")
+    @app_commands.describe(enabled="Enable or disable creating season events in this server")
     async def set_enabled(self, interaction: discord.Interaction, enabled: bool):
         """
         Globally enable or disable all season notifications for this guild.
@@ -320,13 +320,13 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                 return
         
         await self.bot.database.set_guild_enabled(interaction.guild_id, 1 if enabled else 0)  # type: ignore[arg-type]
-        response_msg = f"Notifications {'enabled' if enabled else 'disabled'}."
+        response_msg = f"Season events {'enabled' if enabled else 'disabled'}."
         if enabled:
             response_msg += " ✅ Bot has required permissions!"
         await interaction.response.send_message(response_msg, ephemeral=False)
 
 
-    @app_commands.command(name="arpg-toggle-game", description="Configure which games to track for season notifications")
+    @app_commands.command(name="arpg-toggle-game", description="Choose which games get season events in this server")
     async def toggle_game(self, interaction: discord.Interaction):
         """
         Interactive dropdown to toggle games on/off. All games are OFF by default unless explicitly enabled.
@@ -344,7 +344,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
             )
             embed.add_field(
                 name="💡 Need Help?",
-                value="Contact a server administrator to configure game notifications.",
+                value="Contact a server administrator to configure which games get season events.",
                 inline=False
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
@@ -418,7 +418,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                 
                 embed = discord.Embed(
                     title="🎮 Game Configuration Manager",
-                    description=message or "Select games below to toggle their notification status.",
+                    description=message or "Select games below to turn their season events on or off.",
                     color=0x5865F2
                 )
                 
@@ -505,7 +505,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                                 if not perm_ok:
                                     error_embed = discord.Embed(
                                         title="🚫 Permission Check Failed",
-                                        description="Cannot enable game notifications due to missing permissions.",
+                                        description="Cannot enable season events for this game due to missing permissions.",
                                         color=0xE02B2B
                                     )
                                     error_embed.add_field(
@@ -532,9 +532,9 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                         success_msg = f"{status_icon} **{game_name}** has been {status_text}"
                         
                         if new_val == 1:
-                            success_msg += " for season notifications!"
+                            success_msg += " for season events!"
                         else:
-                            success_msg += ". No notifications will be sent for this game."
+                            success_msg += ". No season events will be created for this game."
                         
                         embed = view_ref.create_main_embed(success_msg)
                         await i.response.edit_message(embed=embed, view=view_ref)
@@ -590,7 +590,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                         if not perm_ok:
                             error_embed = discord.Embed(
                                 title="🚫 Permission Check Failed",
-                                description="Cannot enable notifications due to missing bot permissions.",
+                                description="Cannot enable season events due to missing bot permissions.",
                                 color=0xE02B2B
                             )
                             error_embed.add_field(
@@ -616,7 +616,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                 self.build_select()
                 self.update_buttons_state()
                 
-                success_msg = f"🎉 **All {games_enabled} games enabled!** You'll now receive notifications for all aRPG season changes."
+                success_msg = f"🎉 **All {games_enabled} games enabled!** Season events will now be created for all games."
                 embed = self.create_main_embed(success_msg)
                 await i.response.edit_message(embed=embed, view=self)
 
@@ -631,7 +631,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                 self.build_select()
                 self.update_buttons_state()
                 
-                success_msg = f"🔕 **All {games_disabled} games disabled.** No season notifications will be sent until you re-enable games."
+                success_msg = f"🔕 **All {games_disabled} games disabled.** No season events will be created until you re-enable games."
                 embed = self.create_main_embed(success_msg)
                 await i.response.edit_message(embed=embed, view=self)
 
@@ -689,7 +689,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         initial_embed = view.create_main_embed()
         await interaction.edit_original_response(embed=initial_embed, view=view)
 
-    @app_commands.command(name="arpg-status", description="Show current ARPG notification settings")
+    @app_commands.command(name="arpg-status", description="Show current aRPG season event settings")
     async def status(self, interaction: discord.Interaction):
         """
         Display the current notification configuration for this guild: enablement state and per-game toggle states.
@@ -714,7 +714,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         
         # Create main embed
         embed = discord.Embed(
-            title="⚙️ aRPG Notification Settings",
+            title="⚙️ aRPG Season Event Settings",
             color=0x00AA88 if notifications_enabled else 0xE02B2B,
             timestamp=discord.utils.utcnow()
         )
@@ -729,7 +729,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         status_emoji = "🟢" if notifications_enabled else "🔴"
         status_text = "**ENABLED**" if notifications_enabled else "**DISABLED**"
         embed.add_field(
-            name="📡 Notification Status",
+            name="📡 Season Events",
             value=f"{status_emoji} {status_text}",
             inline=True
         )
@@ -810,7 +810,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
         if not notifications_enabled:
             embed.add_field(
                 name="💡 Quick Start",
-                value="Use `/arpg-enable true` to enable notifications",
+                value="Use `/arpg-enable true` to enable season events",
                 inline=False
             )
         elif not perm_ok:
@@ -872,7 +872,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
                 value=(
                     "✅ **Manage Events** - Manage scheduled events\n"
                     "✅ **Create Events** - Create scheduled events\n"
-                    "✅ **Send Messages** - Send notifications\n"
+                    "✅ **Send Messages** - Reply in channels\n"
                     "✅ **Embed Links** - Rich message formatting"
                 ),
                 inline=False
@@ -880,7 +880,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
             
             embed.add_field(
                 name="⚡ What Happens Next",
-                value="• Bot will create Discord events for new seasons\n• Events appear in your server's Events tab\n• Members get notified based on their settings",
+                value="• Bot will create Discord events for new seasons\n• Events appear in your server's Events tab\n• Members who mark an event as Interested get Discord's reminders",
                 inline=False
             )
             
@@ -924,7 +924,7 @@ class ARPGTimeline(commands.Cog, name="arpg"):
             
             embed.add_field(
                 name="⚠️ Current Impact",
-                value="• Season notifications are enabled but **events won't be created**\n• Bot will keep retrying every 5 minutes\n• Check logs for repeated failure messages",
+                value="• Season events are enabled but **won't be created**\n• Bot will keep retrying every 15 minutes\n• Check logs for repeated failure messages",
                 inline=False
             )
         

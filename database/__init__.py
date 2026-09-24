@@ -95,6 +95,29 @@ class DatabaseManager:
         )
         await self.connection.commit()
 
+    # ---------------- aRPG Timeline - Guild data cleanup ----------------
+    _GUILD_TABLES = ("guild_settings", "guild_games", "season_cache")
+
+    async def get_stored_guild_ids(self) -> set[str]:
+        """Return every guild ID that has at least one row in a guild-scoped table."""
+        rows = await self.connection.execute(
+            " UNION ".join(f"SELECT guild_id FROM {t}" for t in self._GUILD_TABLES)
+        )
+        async with rows as cursor:
+            return {str(r[0]) async for r in cursor}
+
+    async def delete_guild_data(self, guild_id: int | str) -> int:
+        """Delete all rows for the guild from guild-scoped tables. Returns the number of rows deleted."""
+        deleted = 0
+        for table in self._GUILD_TABLES:
+            cursor = await self.connection.execute(
+                f"DELETE FROM {table} WHERE guild_id=?",
+                (str(guild_id),),
+            )
+            deleted += cursor.rowcount
+        await self.connection.commit()
+        return deleted
+
     # ---------------- API Tokens (persistent) ----------------
     async def get_api_token(self, key: str) -> tuple[str | None, str | None]:
         """Return (token, expires_at_iso) for the given key or (None, None)."""

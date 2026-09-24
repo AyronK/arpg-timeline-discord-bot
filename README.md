@@ -4,13 +4,13 @@
 [![License](https://img.shields.io/github/license/svn-josh/aRPG-Timeline-Discord-Bot)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 
-A Discord bot that automatically tracks and notifies your community about upcoming **Action RPG (aRPG) seasons** using the [aRPG Timeline API](https://arpg-timeline.com). Never miss a new season launch again!
+A Discord bot that tracks upcoming **Action RPG (aRPG) seasons** using the [aRPG Timeline API](https://arpg-timeline.com) and adds them to your server as Discord scheduled events. Never miss a new season launch again!
 
 ## 🎮 Features
 
-- **🔔 Automatic Notifications**: Get notified when new aRPG seasons are announced
-- **📅 Discord Events**: Creates scheduled Discord events for upcoming seasons
-- **⚙️ Configurable**: Enable/disable notifications per game
+- **📅 Discord Events**: Creates a scheduled Discord event for each upcoming season, so members can mark themselves as interested and get Discord's own event reminders
+- **🔄 Kept Up to Date**: Updates events when season details change and deletes them if a season is cancelled or postponed
+- **⚙️ Configurable**: Choose which games get events in your server
 - **🎯 Multiple Games**: Supports Diablo, Path of Exile, Torchlight, and more
 - **📊 Season Tracking**: View active seasons with start/end dates
 - **🛡️ Permission Checks**: Validates bot permissions before enabling features
@@ -21,7 +21,7 @@ A Discord bot that automatically tracks and notifies your community about upcomi
 
 The easiest way to get started is by inviting the official bot to your Discord server:
 
-**[🤖 Invite Official Bot](https://discord.com/oauth2/authorize?client_id=1420355725426688010&scope=bot&permissions=526670825536)**
+**[🤖 Invite Official Bot](https://discord.com/oauth2/authorize?client_id=1420355725426688010&scope=bot&permissions=17602923482112)**
 
 *The official bot is hosted and maintained by the aRPG Timeline team.*
 
@@ -73,13 +73,16 @@ The bot tracks seasons for popular aRPG titles including:
 
 ## 📋 Required Permissions
 
-The bot needs the following Discord permissions to function properly:
+| Permission | Why |
+|---|---|
+| **View Channels** | See the channels commands are used in |
+| **Send Messages** | Reply in channels (owner utility commands) |
+| **Embed Links** | Rich embed formatting |
+| **Use Application Commands** | Slash commands |
+| **Manage Events** | Update events when season details change and delete them when a season is cancelled or postponed |
+| **Create Events** | Create a scheduled event for each upcoming season |
 
-- **View Channels** - To see server channels
-- **Send Messages** - To send notifications  
-- **Use Slash Commands** - For command functionality
-- **Manage Events** - To create Discord scheduled events
-- **Embed Links** - For rich message formatting
+The invite links above request exactly these (`permissions=17602923482112`). Use the same value when self-hosting.
 
 ## ⚙️ Configuration
 
@@ -90,13 +93,15 @@ The bot needs the following Discord permissions to function properly:
 | `TOKEN` | Discord bot token | ✅ |
 | `PREFIX` | Command prefix (for legacy commands) | ❌ |
 | `INVITE_LINK` | Bot invite link | ❌ |
+| `FEEDBACK_USER_IDS` | Comma-separated user IDs that receive `/feedback` DMs (defaults to the app/team owner). Each must share a server with the bot and allow DMs | ❌ |
 | `ARPG_API_BASE` | aRPG Timeline API base URL | ❌ |
 | `ARPG_CLIENT_ID` | API client ID | ❌ |
 | `ARPG_CLIENT_SECRET` | API client secret | ❌ |
+| `TOPGG_TOKEN` | top.gg API token; if set, the server count is posted to top.gg every 30 minutes | ❌ |
 
 ### Server Setup
 
-1. **Invite the bot** with proper permissions
+1. **Invite the bot** with the permissions above
 2. **Run** `/arpg-check-permissions` to verify setup
 3. **Enable notifications** with `/arpg-enable true`
 4. **Configure games** using `/arpg-toggle-game`
@@ -123,13 +128,16 @@ services:
 Uses SQLite for data persistence:
 - **Guild settings** - Server-specific configuration
 - **Game toggles** - Per-server game enable/disable state
-- **Season cache** - Prevents duplicate notifications
+- **Season cache** - Which seasons already have an event, and that event's ID (prevents duplicates)
 - **API tokens** - Cached authentication tokens
 
 ## 🔗 Related Links
 
 - **[aRPG Timeline Website](https://arpg-timeline.com)** - Source of season data
-- **[Official Bot Invite](https://discord.com/oauth2/authorize?client_id=1420355725426688010&scope=bot&permissions=526670825536)** - Add to your server
+- **[Bot Page](https://www.arpg-timeline.com/discord-bot)** - About the bot
+- **[Terms of Service](https://www.arpg-timeline.com/terms)** - Terms for using the bot (section 9)
+- **[Privacy Policy](https://www.arpg-timeline.com/privacy#discord-bot)** - What data the bot stores and for how long
+- **[Official Bot Invite](https://discord.com/oauth2/authorize?client_id=1420355725426688010&scope=bot&permissions=17602923482112)** - Add to your server
 - **[Support Server](https://discord.gg/MA4eGN9Hbu)** - Get help and support
 
 ## 🤝 Contributing

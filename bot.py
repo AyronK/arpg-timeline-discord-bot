@@ -1,5 +1,6 @@
 import json
 import logging
+import logging.handlers
 import os
 import platform
 import random
@@ -15,50 +16,21 @@ from database import DatabaseManager
 
 load_dotenv()
 
-"""	
-Setup bot intents (events restrictions)
-For more information about intents, please go to the following websites:
+"""
+Bot intents: only what the bot uses. No privileged intents (members, presences,
+message_content), so the bot never receives message content, member lists or online status.
 https://discordpy.readthedocs.io/en/latest/intents.html
-https://discordpy.readthedocs.io/en/latest/intents.html#privileged-intents
 
-
-Default Intents:
-intents.bans = True
-intents.dm_messages = True
-intents.dm_reactions = True
-intents.dm_typing = True
-intents.emojis = True
-intents.emojis_and_stickers = True
-intents.guild_messages = True
-intents.guild_reactions = True
-intents.guild_scheduled_events = True
-intents.guild_typing = True
+- guilds: guild list/cache, on_guild_remove, channel/role data for permission checks
+- guild_scheduled_events: create, edit and delete season events
+- guild_messages / dm_messages: owner-only prefix commands (`sync`, `unsync`). Without
+  message_content these only work when the bot is @mentioned, or in DMs with the bot.
+"""
+intents = discord.Intents.none()
 intents.guilds = True
-intents.integrations = True
-intents.invites = True
-intents.messages = True # `message_content` is required to get the content of the messages
-intents.reactions = True
-intents.typing = True
-intents.voice_states = True
-intents.webhooks = True
-
-Privileged Intents (Needs to be enabled on developer portal of Discord), please use them only if you need them:
-intents.members = True
-intents.message_content = True
-intents.presences = True
-"""
-
-intents = discord.Intents.default()
 intents.guild_scheduled_events = True
-intents.message_content = True
-
-"""
-Uncomment this if you want to use prefix (normal) commands.
-It is recommended to use slash commands and therefore not use prefix commands.
-
-If you want to use prefix commands, make sure to also enable the intent below in the Discord developer portal.
-"""
-# (message_content intent is explicitly enabled above)
+intents.guild_messages = True
+intents.dm_messages = True
 
 # Setup both of the loggers
 
@@ -103,7 +75,13 @@ console_handler.setFormatter(LoggingFormatter())
 # File handler (ensure logs directory exists)
 log_dir = os.path.join(os.path.dirname(__file__), "logs")
 os.makedirs(log_dir, exist_ok=True)
-file_handler = logging.FileHandler(filename=os.path.join(log_dir, "discord.log"), encoding="utf-8", mode="w")
+# Size-limited rotation keeps logs short-lived: at most ~4 MB on disk (1 MB + 3 backups)
+file_handler = logging.handlers.RotatingFileHandler(
+    filename=os.path.join(log_dir, "discord.log"),
+    encoding="utf-8",
+    maxBytes=1024 * 1024,
+    backupCount=3,
+)
 file_handler_formatter = logging.Formatter(
     "[{asctime}] [{levelname:<8}] {name}: {message}", "%Y-%m-%d %H:%M:%S", style="{"
 )
@@ -194,16 +172,19 @@ class DiscordBot(commands.Bot):
         """
         statuses = [
         "tracking new seasons!",
-        "calculating loot drops!",
-        "watching ARPG timelines!",
+        "calculating loot tables!",
         "summoning bosses!",
-        "leveling up your notifications!",
+        "blasting through acts!",
         "preparing the next event!",
         "exploring dungeons!",
+        "crafting new items!",
+        "theorycrafting!",
+        "sorting the stash tabs!",
+        "min-maxing gear!",
+        "refreshing the patch notes!",
         "⏳arpg-timeline.com",
         f"on {len(self.guilds)} servers!",
-        f"with {len(self.users)} adventurers!",
-        "user /help for commands!",
+        "use /help for commands!",
         ]
         await self.change_presence(activity=discord.Game(random.choice(statuses)))
 
@@ -235,6 +216,41 @@ class DiscordBot(commands.Bot):
         await self.load_cogs()
         self.status_task.start()
 
+    async def on_ready(self) -> None:
+        """
+        Remove stored data for servers the bot left while it was offline.
+        on_ready can fire again after reconnects, so the cleanup only runs once per process.
+        """
+        if getattr(self, "_stale_guilds_purged", False) or self.database is None:
+            return
+        self._stale_guilds_purged = True
+        # Never treat an empty guild cache as "left every server"
+        if not self.guilds:
+            self.logger.warning("Skipping stale guild cleanup: guild cache is empty")
+            return
+        current = {str(g.id) for g in self.guilds}
+        try:
+            stale = await self.database.get_stored_guild_ids() - current
+            for guild_id in stale:
+                deleted = await self.database.delete_guild_data(guild_id)
+                self.logger.info(f"guild={guild_id} action=purge_stale_guild rows_deleted={deleted}")
+        except Exception as e:
+            self.logger.error(f"Stale guild cleanup failed: {e}")
+
+    async def on_guild_remove(self, guild: discord.Guild) -> None:
+        """
+        Delete all stored data for a server when the bot is removed from it.
+
+        :param guild: The guild the bot was removed from.
+        """
+        if self.database is None:
+            return
+        try:
+            deleted = await self.database.delete_guild_data(guild.id)
+            self.logger.info(f"guild={guild.id} action=purge_removed_guild rows_deleted={deleted}")
+        except Exception as e:
+            self.logger.error(f"guild={guild.id} action=purge_removed_guild failed: {e}")
+
     async def on_message(self, message: discord.Message) -> None:
         """
         The code in this event is executed every time someone sends a message, with or without the prefix
@@ -253,7 +269,7 @@ class DiscordBot(commands.Bot):
         if interaction.type == discord.InteractionType.application_command:
             command_name = getattr(interaction.command, 'name', 'unknown') if interaction.command else 'unknown'
             location = f"in {interaction.guild.name} (ID: {interaction.guild.id})" if interaction.guild else "in DMs"
-            self.logger.debug(f"Received /{command_name} interaction {location} from {interaction.user} (ID: {interaction.user.id})")
+            self.logger.debug(f"Received /{command_name} interaction {location} from user ID {interaction.user.id}")
 
     async def on_command_completion(self, context: Context) -> None:
         """
@@ -266,11 +282,11 @@ class DiscordBot(commands.Bot):
         executed_command = str(split[0])
         if context.guild is not None:
             self.logger.info(
-                f"Executed {executed_command} command in {context.guild.name} (ID: {context.guild.id}) by {context.author} (ID: {context.author.id})"
+                f"Executed {executed_command} command in {context.guild.name} (ID: {context.guild.id}) by user ID {context.author.id}"
             )
         else:
             self.logger.info(
-                f"Executed {executed_command} command by {context.author} (ID: {context.author.id}) in DMs"
+                f"Executed {executed_command} command by user ID {context.author.id} in DMs"
             )
 
     async def on_app_command_completion(self, interaction: discord.Interaction, command: discord.app_commands.Command) -> None:
@@ -283,11 +299,11 @@ class DiscordBot(commands.Bot):
         command_name = command.name
         if interaction.guild is not None:
             self.logger.info(
-                f"Executed /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by {interaction.user} (ID: {interaction.user.id})"
+                f"Executed /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by user ID {interaction.user.id}"
             )
         else:
             self.logger.info(
-                f"Executed /{command_name} slash command by {interaction.user} (ID: {interaction.user.id}) in DMs"
+                f"Executed /{command_name} slash command by user ID {interaction.user.id} in DMs"
             )
 
     async def on_app_command_error(self, interaction: discord.Interaction, error: discord.app_commands.AppCommandError) -> None:
@@ -301,11 +317,11 @@ class DiscordBot(commands.Bot):
         
         if interaction.guild is not None:
             self.logger.error(
-                f"Error in /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by {interaction.user} (ID: {interaction.user.id}): {error}"
+                f"Error in /{command_name} slash command in {interaction.guild.name} (ID: {interaction.guild.id}) by user ID {interaction.user.id}: {error}"
             )
         else:
             self.logger.error(
-                f"Error in /{command_name} slash command by {interaction.user} (ID: {interaction.user.id}) in DMs: {error}"
+                f"Error in /{command_name} slash command by user ID {interaction.user.id} in DMs: {error}"
             )
         
         # Send a generic error message to the user if they haven't been responded to yet
@@ -351,11 +367,11 @@ class DiscordBot(commands.Bot):
             await context.send(embed=embed)
             if context.guild:
                 self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."
+                    f"User ID {context.author.id} tried to execute an owner only command in the guild {context.guild.name} (ID: {context.guild.id}), but the user is not an owner of the bot."
                 )
             else:
                 self.logger.warning(
-                    f"{context.author} (ID: {context.author.id}) tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."
+                    f"User ID {context.author.id} tried to execute an owner only command in the bot's DMs, but the user is not an owner of the bot."
                 )
         elif isinstance(error, commands.MissingPermissions):
             embed = discord.Embed(

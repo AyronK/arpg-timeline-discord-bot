@@ -70,7 +70,7 @@ After modifying commands, sync with Discord using the owner-only `/sync` command
   
 - **Lifecycle**:
   1. Load environment variables
-  2. Initialize intents (guilds, scheduled_events, message_content)
+  2. Initialize intents (guilds, guild_scheduled_events, guild/DM messages; no privileged intents)
   3. On ready: Initialize database, load cogs, start status task
   4. Poll for new seasons every 5 minutes (via ARPGTimeline cog)
   5. Process seasons and create Discord events per guild settings
@@ -129,7 +129,6 @@ Handles season polling, notifications, and user commands:
 Community utilities:
 - `/help`: Lists all slash commands grouped by cog with emoji labels
 - Context menu: "Grab ID" to copy user IDs
-- Context menu: "Remove spoilers" to strip `||` spoiler markers
 - Feedback modal (unused but available)
 
 #### **cogs/owner.py**
