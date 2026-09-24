@@ -172,15 +172,18 @@ class DiscordBot(commands.Bot):
         """
         statuses = [
         "tracking new seasons!",
-        "calculating loot drops!",
-        "watching ARPG timelines!",
+        "calculating loot tables!",
         "summoning bosses!",
-        "leveling up your events!",
         "preparing the next event!",
         "exploring dungeons!",
+        "crafting new items!",
+        "theorycrafting!",
+        "sorting the stash tabs!",
+        "min-maxing gear!",
+        "refreshing the patch notes!",
         "⏳arpg-timeline.com",
         f"on {len(self.guilds)} servers!",
-        "user /help for commands!",
+        "use /help for commands!",
         ]
         await self.change_presence(activity=discord.Game(random.choice(statuses)))
 
