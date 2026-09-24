@@ -174,6 +174,7 @@ class DiscordBot(commands.Bot):
         "tracking new seasons!",
         "calculating loot tables!",
         "summoning bosses!",
+        "blasting through acts!",
         "preparing the next event!",
         "exploring dungeons!",
         "crafting new items!",
